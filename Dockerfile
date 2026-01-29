@@ -1,43 +1,37 @@
-FROM python:3.14.2-slim-trixie@sha256:9b81fe9acff79e61affb44aaf3b6ff234392e8ca477cb86c9f7fd11732ce9b6a
-
+FROM alpine:3.22.3 AS build
 ARG GENMON_VERSION
 
-RUN apt update -y
-RUN apt upgrade -y
-
-# The timezone specified here just bypasses some required configuration, it is not configuring a persistent setting
-RUN DEBIAN_FRONTEND="noninteractive" TZ="America/Los_Angeles" apt install -y sudo git
-
 # Download genmon code at specific version
-RUN mkdir -p /app && cd /app && git clone https://github.com/jgyates/genmon.git && \
-    cd genmon && git checkout "V${GENMON_VERSION}"
-RUN sudo chmod 775 /app/genmon/startgenmon.sh && sudo chmod 775 /app/genmon/genmonmaint.sh
+RUN apk update && \
+apk add --no-cache python3 py3-pip git bash gcc python3-dev build-base linux-headers sudo && \
+mkdir -p /app && cd /app && git clone https://github.com/jgyates/genmon.git && \
+cd genmon && git checkout "V${GENMON_VERSION}" && \
+chmod 775 /app/genmon/startgenmon.sh && \
+chmod 775 /app/genmon/genmonmaint.sh 
 
-# Update the genmon.conf file to use the TCP serial for ESP32 devices
-RUN sed -i 's/use_serial_tcp = False/use_serial_tcp = True/g' /app/genmon/conf/genmon.conf
-RUN sed -i 's/serial_tcp_port = 8899/serial_tcp_port = 6638/g' /app/genmon/conf/genmon.conf
-RUN echo "update_check = false" >> /app/genmon/conf/genmon.conf
+# Update the genmon.conf file to use the TCP serial for ESP8266/ESP32 devices
+RUN sed -i 's/use_serial_tcp = False/use_serial_tcp = True/g' /app/genmon/conf/genmon.conf && \
+sed -i 's/serial_tcp_port = 8899/serial_tcp_port = 9000/g' /app/genmon/conf/genmon.conf && \
+echo "update_check = false" >> /app/genmon/conf/genmon.conf
 
 # Update MQTT default config
-RUN sed -i 's/strlist_json = False/strlist_json = True/g' /app/genmon/conf/genmqtt.conf
-RUN sed -i 's/flush_interval = 0/flush_interval = 60/g' /app/genmon/conf/genmqtt.conf
-RUN sed -i 's/blacklist = Monitor,Run Time,Monitor Time,Generator Time,External Data/blacklist = Run Time,Monitor Time,Generator Time,Platform Stats,Communication Stats/g' /app/genmon/conf/genmqtt.conf
-
-# Force to use virtualenv
-RUN mkdir -p /usr/lib/python3.14
-RUN echo '' >> /usr/lib/python3.14/EXTERNALLY-MANAGED
+RUN sed -i 's/strlist_json = False/strlist_json = True/g' /app/genmon/conf/genmqtt.conf && \
+sed -i 's/flush_interval = 0/flush_interval = 60/g' /app/genmon/conf/genmqtt.conf && \
+sed -i 's/blacklist = Monitor,Run Time,Monitor Time,Generator Time,External Data/blacklist = Run Time,Monitor Time,Generator Time,Platform Stats,Communication Stats/g' /app/genmon/conf/genmqtt.conf
 
 # Install Genmon requirements
-RUN cd /app/genmon && ./genmonmaint.sh -i -n -s
-RUN /app/genmon/genenv/bin/pip install setuptools
+RUN cd /app/genmon && ./genmonmaint.sh -i -n -s && ./genmonmaint.sh -r -n
 
-# Configure startup script
+# Clean out unneeded files for next stage
+RUN cd /app/genmon && \
+rm -rf .git .github Diagrams
+
+FROM alpine:3.22.3
+COPY --from=build /app/ /app/
 COPY start.sh /app/start.sh
-RUN chmod +x /app/start.sh
-
-# Clean up
-RUN apt-get purge -y git build-essential libssl-dev libffi-dev python3-dev cargo && apt autoremove && apt clean ; \
-  rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*
+RUN apk update && \
+apk add --no-cache python3 py3-pip bash sudo && \
+chmod +x /app/start.sh
 
 VOLUME /etc/genmon
 
@@ -51,8 +45,8 @@ CMD ["/app/start.sh"]
 # https://github.com/opencontainers/image-spec/blob/v1.0.1/annotations.md#pre-defined-annotation-keys
 LABEL org.opencontainers.image.title="Genmon Docker Image"
 LABEL org.opencontainers.image.description="Image to run an instance of Genmon"
-LABEL org.opencontainers.image.url="https://github.com/philmichel/genmon"
-LABEL org.opencontainers.image.documentation="https://github.com/philmichel/genmon#readme"
+LABEL org.opencontainers.image.url="https://github.com/juanboro/genmon"
+LABEL org.opencontainers.image.documentation="https://github.com/juanboro/genmon#readme"
 LABEL org.opencontainers.image.licenses="GPL-2.0"
-LABEL org.opencontainers.image.authors="Joe Ipson & Phil Michel"
+LABEL org.opencontainers.image.authors="Jon Krause"
 LABEL org.opencontainers.image.version="${GENMON_VERSION}"
