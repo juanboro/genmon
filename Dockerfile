@@ -30,7 +30,7 @@ FROM alpine:3.22.3
 COPY --from=build /app/ /app/
 COPY start.sh /app/start.sh
 RUN apk update && \
-apk add --no-cache python3 py3-pip bash sudo && \
+apk add --no-cache python3 py3-pip bash sudo tzdata && \
 chmod +x /app/start.sh
 
 VOLUME /etc/genmon

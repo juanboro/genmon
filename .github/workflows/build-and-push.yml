@@ -73,12 +73,3 @@ jobs:
           cache-to: type=gha,mode=max
           provenance: true
           sbom: true
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2
-        with:
-          tag_name: ${{ env.VERSION }}
-          name: "Genmon v${{ env.VERSION }}"
-          body: "New Genmon release detected. See the full release notes [here](https://github.com/jgyates/genmon/releases/tag/V${{ env.VERSION }})."
-          draft: false
-          prerelease: false
