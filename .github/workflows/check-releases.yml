@@ -2,7 +2,8 @@ name: Check Genmon Releases
 
 on:
   schedule:
-    - cron: "0 0 * * *"  # Daily at midnight UTC
+#    - cron: "0 0 * * *"  # Daily at midnight UTC
+    - cron: '0 0 * * 0'  # Runs sunday at midnight UTC
   workflow_dispatch:  # Allows manual triggering
 
 permissions:
