@@ -33,8 +33,6 @@ RUN apk update && \
 apk add --no-cache python3 py3-pip bash sudo tzdata && \
 chmod +x /app/start.sh
 
-USER 1000:1000
-
 VOLUME /etc/genmon
 
 EXPOSE 22
