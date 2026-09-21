@@ -1,4 +1,4 @@
-FROM alpine:3.22.3 AS build
+FROM alpine:3.24.2 AS build
 ARG GENMON_VERSION
 
 # Download genmon code at specific version. Upstream dropped the V tag prefix
@@ -26,7 +26,7 @@ RUN cd /app/genmon && ./genmonmaint.sh -i -n -s && ./genmonmaint.sh -r -n
 RUN cd /app/genmon && \
 rm -rf .git .github Diagrams
 
-FROM alpine:3.22.3
+FROM alpine:3.24.2
 COPY --from=build /app/ /app/
 COPY start.sh /app/start.sh
 RUN apk update && \
