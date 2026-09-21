@@ -1,13 +1,11 @@
 FROM alpine:3.22.3 AS build
 ARG GENMON_VERSION
 
-# Download genmon code at specific version
-RUN apk update && \
-apk add --no-cache python3 py3-pip git bash gcc python3-dev build-base linux-headers sudo && \
-mkdir -p /app && cd /app && git clone https://github.com/jgyates/genmon.git && \
-cd genmon && git checkout "V${GENMON_VERSION}" && \
-chmod 775 /app/genmon/startgenmon.sh && \
-chmod 775 /app/genmon/genmonmaint.sh 
+# Download genmon code at specific version. Upstream dropped the V tag prefix
+# with 2.0.01, so try both tag styles.
+RUN mkdir -p /app && cd /app && git clone https://github.com/jgyates/genmon.git && \
+    cd genmon && { git checkout "V${GENMON_VERSION}" 2>/dev/null || git checkout "${GENMON_VERSION}"; }
+RUN sudo chmod 775 /app/genmon/startgenmon.sh && sudo chmod 775 /app/genmon/genmonmaint.sh
 
 # Update the genmon.conf file to use the TCP serial for ESP8266/ESP32 devices
 RUN sed -i 's/use_serial_tcp = False/use_serial_tcp = True/g' /app/genmon/conf/genmon.conf && \
@@ -32,6 +30,8 @@ COPY start.sh /app/start.sh
 RUN apk update && \
 apk add --no-cache python3 py3-pip bash sudo tzdata && \
 chmod +x /app/start.sh
+
+USER 1000:1000
 
 VOLUME /etc/genmon
 
